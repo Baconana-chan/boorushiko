@@ -1,0 +1,81 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  server:
+    name: Server (tests, typecheck, build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+      # better-sqlite3 and sharp ship prebuilt binaries for Node 22; npm ci keeps
+      # the lockfile authoritative so CI and production resolve the same versions.
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+  web:
+    name: Web (production build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - run: npm ci
+      - run: npx ng build --configuration production
+      - uses: actions/upload-artifact@v4
+        with:
+          name: browser-bundle
+          path: dist/boorushiko/browser
+          retention-days: 7
+
+  smoke:
+    name: Smoke (engine on a scratch database)
+    runs-on: ubuntu-latest
+    needs: [server]
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      # Demo posts point at public/nekotime; no mirrors, no network, no keys.
+      - run: npm run smoke
+
+  # Deploy stays manual until the production checklist in TODO.md is done; this
+  # job is the gate to enable once a deploy target exists.
+  deploy:
+    name: Deploy (disabled)
+    if: ${{ false }}
+    runs-on: ubuntu-latest
+    needs: [server, web, smoke]
+    steps:
+      - run: echo "Wire the deploy target here after the green checks above."

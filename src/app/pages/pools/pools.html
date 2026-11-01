@@ -1,0 +1,154 @@
+<div class="mx-auto max-w-[1200px] px-3 py-5 sm:px-5 sm:py-7">
+  <header class="flex flex-wrap items-end justify-between gap-3">
+    <div>
+      <p class="font-mono text-[10px] uppercase tracking-[0.18em] text-ink-500">
+        {{ i18n.t().pools }}
+      </p>
+      <h1 class="mt-1 text-2xl font-bold text-white">{{ i18n.t().poolsTitle }}</h1>
+      <p class="mt-1 text-sm text-ink-400">{{ i18n.t().poolsLead }}</p>
+    </div>
+    @if (state() === 'ready') {
+      <span class="font-mono text-xs text-ink-500">{{ total() }}</span>
+    }
+  </header>
+
+  @if (auth.isStaff()) {
+    <form
+      (submit)="create($event)"
+      class="mt-5 grid gap-2 rounded-2xl border border-white/8 bg-ink-900/60 p-4 sm:grid-cols-[minmax(0,1fr)_180px_auto]"
+    >
+      <label class="block text-[10px] font-mono uppercase tracking-wider text-ink-500">
+        {{ i18n.t().poolTitle }}
+        <input
+          name="title"
+          required
+          maxlength="120"
+          class="mt-1 h-9 w-full rounded-lg border border-white/10 bg-ink-850 px-2 text-sm normal-case tracking-normal text-white outline-none focus:border-sakura-400/60"
+        />
+      </label>
+      <label class="block text-[10px] font-mono uppercase tracking-wider text-ink-500">
+        {{ i18n.t().poolCategory }}
+        <select
+          name="category"
+          class="mt-1 h-9 w-full rounded-lg border border-white/10 bg-ink-850 px-2 font-mono text-xs normal-case tracking-normal text-ink-200 outline-none focus:border-sakura-400/60"
+        >
+          @for (category of categories; track category) {
+            <option [value]="category">{{ categoryLabel(category) }}</option>
+          }
+        </select>
+      </label>
+      <button
+        type="submit"
+        [disabled]="creating()"
+        class="mt-auto h-9 rounded-lg bg-sakura-500 px-3 text-sm font-semibold text-white transition hover:bg-sakura-600 disabled:opacity-50"
+      >
+        {{ i18n.t().poolSave }}
+      </button>
+      <label
+        class="block text-[10px] font-mono uppercase tracking-wider text-ink-500 sm:col-span-2"
+      >
+        {{ i18n.t().poolDescription }}
+        <input
+          name="description"
+          maxlength="2000"
+          class="mt-1 h-9 w-full rounded-lg border border-white/10 bg-ink-850 px-2 text-sm normal-case tracking-normal text-white outline-none focus:border-sakura-400/60"
+        />
+      </label>
+      <label
+        class="flex items-center gap-2 self-end text-[11px] font-mono uppercase tracking-wider text-ink-400"
+      >
+        <input type="checkbox" name="isPublic" checked class="accent-sakura-500" />
+        {{ i18n.t().poolPublic }}
+      </label>
+      @if (createError()) {
+        <p class="text-xs text-rose-300 sm:col-span-3">{{ createError() }}</p>
+      }
+    </form>
+  }
+
+  @if (state() === 'loading') {
+    <div class="mt-5 space-y-2">
+      @for (placeholder of [1, 2, 3]; track placeholder) {
+        <div class="h-20 animate-pulse rounded-2xl border border-white/8 bg-ink-900/60"></div>
+      }
+    </div>
+  } @else if (state() === 'error') {
+    <div class="mt-5 rounded-2xl border border-rose-500/25 bg-rose-500/5 px-6 py-14 text-center">
+      <p class="font-semibold text-rose-200">{{ i18n.t().errorTitle }}</p>
+      <button
+        type="button"
+        (click)="load(page())"
+        class="mt-4 rounded-lg bg-sakura-500 px-3 py-2 text-sm font-semibold text-white transition hover:bg-sakura-600"
+      >
+        {{ i18n.t().retry }}
+      </button>
+    </div>
+  } @else if (pools().length === 0) {
+    <div class="mt-5 rounded-2xl border border-white/8 bg-ink-900/60 px-6 py-14 text-center">
+      <p class="text-sm text-ink-300">{{ i18n.t().poolsEmpty }}</p>
+    </div>
+  } @else {
+    <ul class="mt-5 space-y-2">
+      @for (pool of pools(); track pool.id) {
+        <li>
+          <a
+            [routerLink]="['/pools', pool.id]"
+            class="flex items-center gap-3 rounded-2xl border border-white/8 bg-ink-900/60 px-4 py-3 transition hover:border-sakura-500/40 hover:bg-ink-900"
+          >
+            <div class="min-w-0 flex-1">
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="truncate font-semibold text-white">{{ pool.title }}</span>
+                <span
+                  class="rounded bg-white/[0.06] px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wider text-ink-400"
+                  >{{ categoryLabel(pool.category) }}</span
+                >
+                @if (!pool.isPublic) {
+                  <span
+                    class="rounded bg-amber-400/10 px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wider text-amber-300"
+                    >{{ i18n.t().hide }}</span
+                  >
+                }
+              </div>
+              @if (pool.description) {
+                <p class="mt-1 line-clamp-2 text-sm text-ink-400">{{ pool.description }}</p>
+              }
+            </div>
+            <div class="shrink-0 text-right">
+              <p class="font-mono text-sm text-sakura-300">{{ pool.postCount }}</p>
+              <p class="font-mono text-[10px] uppercase tracking-wider text-ink-500">
+                {{ i18n.t().posts }}
+              </p>
+              <p class="mt-1 font-mono text-[10px] text-ink-600">
+                {{ formatDate(pool.updatedAt, i18n.locale()) }}
+              </p>
+            </div>
+          </a>
+        </li>
+      }
+    </ul>
+
+    @if (page() > 1 || hasMore()) {
+      <nav class="mt-6 flex items-center justify-center gap-2">
+        <button
+          type="button"
+          [disabled]="page() <= 1"
+          (click)="load(page() - 1)"
+          class="rounded-lg border border-white/10 px-3 py-1.5 text-sm text-ink-300 transition hover:bg-white/5 disabled:opacity-40"
+        >
+          {{ i18n.t().paginationPrevious }}
+        </button>
+        <span class="font-mono text-xs text-ink-500"
+          >{{ i18n.t().paginationPage }} {{ page() }}</span
+        >
+        <button
+          type="button"
+          [disabled]="!hasMore()"
+          (click)="load(page() + 1)"
+          class="rounded-lg border border-white/10 px-3 py-1.5 text-sm text-ink-300 transition hover:bg-white/5 disabled:opacity-40"
+        >
+          {{ i18n.t().paginationNext }}
+        </button>
+      </nav>
+    }
+  }
+</div>

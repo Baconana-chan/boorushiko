@@ -1,12 +1,17 @@
-import { Component, signal } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { RouterLink, RouterOutlet } from '@angular/router';
+import { I18n } from './core/i18n';
+import { Header } from './layout/header/header';
+import { NekoClock } from './shared/neko-clock/neko-clock';
 
 @Component({
-  imports: [RouterOutlet],
   selector: 'app-root',
-  styleUrl: './app.css',
+  imports: [RouterOutlet, RouterLink, Header, NekoClock],
   templateUrl: './app.html',
+  styleUrl: './app.css',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class App {
-  protected readonly title = signal('boorushiko');
+  readonly i18n = inject(I18n);
+  readonly year = new Date().getFullYear();
 }

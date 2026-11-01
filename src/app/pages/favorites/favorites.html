@@ -1,0 +1,77 @@
+<div class="mx-auto max-w-[1500px] px-3 py-5 sm:px-5 sm:py-7">
+  <header class="flex flex-wrap items-end justify-between gap-3">
+    <div>
+      <p class="font-mono text-[10px] uppercase tracking-[0.18em] text-ink-500">
+        {{ i18n.t().favorites }}
+      </p>
+      <h1 class="mt-1 text-2xl font-bold text-white">{{ i18n.t().favoritesTitle }}</h1>
+      <p class="mt-1 text-sm text-ink-400">{{ i18n.t().favoritesLead }}</p>
+    </div>
+    @if (state() === 'ready') {
+      <span class="font-mono text-xs text-ink-500">{{ total() }} {{ i18n.t().posts }}</span>
+    }
+  </header>
+
+  @if (state() === 'loading') {
+    <div class="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6">
+      @for (placeholder of [1, 2, 3, 4, 5, 6]; track placeholder) {
+        <div class="aspect-square animate-pulse rounded-xl border border-white/8 bg-ink-900/60"></div>
+      }
+    </div>
+  } @else if (needsAuth()) {
+    <div class="mt-6 rounded-2xl border border-white/8 bg-ink-900/60 px-6 py-14 text-center">
+      <p class="text-sm text-ink-300">{{ i18n.t().favoriteLogin }}</p>
+      <a
+        routerLink="/auth"
+        [queryParams]="{ next: '/favorites' }"
+        class="mt-4 inline-block rounded-lg bg-sakura-500 px-3 py-2 text-sm font-semibold text-white transition hover:bg-sakura-600"
+        >{{ i18n.t().signIn }}</a
+      >
+    </div>
+  } @else if (state() === 'error') {
+    <div class="mt-6 rounded-2xl border border-rose-500/25 bg-rose-500/5 px-6 py-14 text-center">
+      <p class="font-semibold text-rose-200">{{ i18n.t().errorTitle }}</p>
+      <button
+        type="button"
+        (click)="load(page())"
+        class="mt-4 rounded-lg bg-sakura-500 px-3 py-2 text-sm font-semibold text-white transition hover:bg-sakura-600"
+      >
+        {{ i18n.t().retry }}
+      </button>
+    </div>
+  } @else if (posts().length === 0) {
+    <div class="mt-6 rounded-2xl border border-white/8 bg-ink-900/60 px-6 py-14 text-center">
+      <p class="text-sm text-ink-300">{{ i18n.t().favoritesEmpty }}</p>
+    </div>
+  } @else {
+    <div class="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6">
+      @for (post of posts(); track post.id) {
+        <app-post-card [post]="post" />
+      }
+    </div>
+
+    @if (page() > 1 || hasMore()) {
+      <nav class="mt-6 flex items-center justify-center gap-2">
+        <button
+          type="button"
+          [disabled]="page() <= 1"
+          (click)="previous()"
+          class="rounded-lg border border-white/10 px-3 py-1.5 text-sm text-ink-300 transition hover:bg-white/5 disabled:opacity-40"
+        >
+          {{ i18n.t().paginationPrevious }}
+        </button>
+        <span class="font-mono text-xs text-ink-500"
+          >{{ i18n.t().paginationPage }} {{ page() }}</span
+        >
+        <button
+          type="button"
+          [disabled]="!hasMore()"
+          (click)="next()"
+          class="rounded-lg border border-white/10 px-3 py-1.5 text-sm text-ink-300 transition hover:bg-white/5 disabled:opacity-40"
+        >
+          {{ i18n.t().paginationNext }}
+        </button>
+      </nav>
+    }
+  }
+</div>

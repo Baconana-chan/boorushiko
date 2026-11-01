@@ -1,0 +1,475 @@
+<div class="mx-auto max-w-[1500px] px-3 py-4 sm:px-5 sm:py-6">
+  <a
+    routerLink="/"
+    class="inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-500 transition hover:text-ink-200"
+  >
+    ← {{ i18n.t().backHome }}
+  </a>
+
+  @if (state() === 'loading') {
+    <div class="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_350px]">
+      <div class="checker min-h-[320px] animate-pulse rounded-2xl border border-white/8"></div>
+      <div class="space-y-3">
+        <div class="h-36 animate-pulse rounded-2xl border border-white/8 bg-ink-900/60"></div>
+        <div class="h-48 animate-pulse rounded-2xl border border-white/8 bg-ink-900/60"></div>
+      </div>
+    </div>
+  } @else if (state() === 'missing') {
+    <div class="flex flex-col items-center py-20 text-center">
+      <div class="flex items-end gap-1">
+        <img src="/nekotime/4.gif" alt="4" class="pixelated h-24 w-auto" />
+        <img src="/nekotime/0.gif" alt="0" class="pixelated h-24 w-auto" />
+        <img src="/nekotime/4.gif" alt="4" class="pixelated h-24 w-auto" />
+      </div>
+      <h1 class="mt-5 text-xl font-semibold text-white">{{ i18n.t().notFoundTitle }}</h1>
+      <p class="mt-1 max-w-sm text-sm text-ink-400">{{ i18n.t().notFoundText }}</p>
+      <a
+        routerLink="/"
+        class="mt-5 rounded-lg border border-white/10 px-3 py-2 text-sm text-ink-200 transition hover:bg-white/5"
+        >{{ i18n.t().backHome }}</a
+      >
+    </div>
+  } @else if (state() === 'sensitive') {
+    <div
+      class="mt-4 flex flex-col items-center rounded-2xl border border-amber-400/25 bg-amber-400/5 px-6 py-16 text-center"
+    >
+      <div class="flex items-end gap-1">
+        <img src="/nekotime/1.gif" alt="1" class="pixelated h-20 w-auto" />
+        <img src="/nekotime/8.gif" alt="8" class="pixelated h-20 w-auto" />
+      </div>
+      <h1 class="mt-5 text-xl font-semibold text-white">{{ i18n.t().sensitiveHiddenTitle }}</h1>
+      <p class="mt-1 max-w-md text-sm leading-relaxed text-ink-400">
+        {{ i18n.t().sensitiveHiddenText }}
+      </p>
+      <div class="mt-5 flex flex-wrap justify-center gap-2">
+        <button
+          type="button"
+          (click)="allowSensitive()"
+          class="rounded-lg bg-sakura-500 px-3 py-2 text-sm font-semibold text-white transition hover:bg-sakura-600"
+        >
+          {{ i18n.t().sensitiveEnable }}
+        </button>
+        <a
+          routerLink="/settings"
+          class="rounded-lg border border-white/10 px-3 py-2 text-sm text-ink-200 transition hover:bg-white/5"
+          >{{ i18n.t().settings }}</a
+        >
+      </div>
+    </div>
+  } @else if (state() === 'error') {
+    <div class="mt-4 rounded-2xl border border-rose-500/25 bg-rose-500/5 px-6 py-16 text-center">
+      <p class="font-semibold text-rose-200">{{ i18n.t().errorTitle }}</p>
+      <p class="mx-auto mt-1 max-w-sm text-sm text-ink-400">{{ i18n.t().errorText }}</p>
+      <button
+        type="button"
+        (click)="retry()"
+        class="mt-4 rounded-lg bg-sakura-500 px-3 py-2 text-sm font-semibold text-white transition hover:bg-sakura-600"
+      >
+        {{ i18n.t().retry }}
+      </button>
+    </div>
+  } @else if (post(); as item) {
+    @if (item.status === 'pending') {
+      <div
+        class="mt-4 flex items-start gap-3 rounded-xl border border-amber-400/25 bg-amber-400/5 px-4 py-3 text-sm"
+      >
+        <span
+          class="mt-0.5 rounded bg-amber-400/15 px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wider text-amber-300"
+          >{{ i18n.t().pending }}</span
+        >
+        <p class="text-ink-300">{{ i18n.t().pendingText }}</p>
+      </div>
+    }
+
+    <div class="mt-3 grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_350px]">
+      <figure
+        class="checker flex min-h-[280px] items-center justify-center rounded-2xl border border-white/8 p-2 sm:min-h-[420px] sm:p-4"
+      >
+        <img
+          [src]="imageSrc()"
+          [alt]="postAlt(item.tags, item.id)"
+          [class.pixelated]="item.width < 300"
+          (error)="onImageError()"
+          (click)="lightbox.set(true)"
+          class="max-h-[82vh] w-auto max-w-full cursor-zoom-in rounded-lg object-contain shadow-2xl shadow-black/50"
+        />
+      </figure>
+
+      <aside class="space-y-3">
+        <section class="rounded-2xl border border-white/8 bg-ink-900/60 p-4">
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <p class="font-mono text-[10px] uppercase tracking-[0.18em] text-ink-500">
+                {{ i18n.t().post }}
+              </p>
+              <h1 class="mt-1 text-xl font-bold text-white">#{{ item.id }}</h1>
+            </div>
+            <span
+              [class]="
+                'rounded px-2 py-1 font-mono text-[11px] font-bold uppercase tracking-wider ring-1 ring-inset ' +
+                ratingBadge(item.rating)
+              "
+            >
+              {{ item.rating }}
+            </span>
+          </div>
+
+          <div class="mt-3 flex items-center justify-between border-t border-white/5 pt-3 text-sm">
+            <span class="font-mono text-sakura-300">♥ {{ item.score }}</span>
+            <span class="font-mono text-[11px] text-ink-500">
+              {{ item.width }} × {{ item.height }} · {{ humanBytes(item.bytes) }}
+            </span>
+          </div>
+
+          <div class="mt-4 space-y-2">
+            <a
+              [href]="item.url"
+              target="_blank"
+              rel="noopener"
+              class="flex items-center justify-center rounded-lg bg-sakura-500 px-3 py-2 text-sm font-semibold text-white transition hover:bg-sakura-600"
+            >
+              {{ i18n.t().openOriginal }}
+            </a>
+            <button
+              type="button"
+              (click)="toggleFavorite()"
+              [disabled]="favoriteSaving()"
+              [class]="
+                'flex w-full items-center justify-center gap-1.5 rounded-lg border px-2 py-2 text-xs transition disabled:opacity-50 ' +
+                (item.favorited
+                  ? 'border-sakura-400/40 bg-sakura-500/15 text-sakura-200'
+                  : 'border-white/10 text-ink-200 hover:bg-white/5')
+              "
+            >
+              <span aria-hidden="true">{{ item.favorited ? '♥' : '♡' }}</span>
+              {{ item.favorited ? i18n.t().favorited : i18n.t().favorite }}
+              <span class="font-mono text-[10px] text-ink-500">{{ item.favoriteCount }}</span>
+            </button>
+            @if (favoriteError()) {
+              <p class="rounded-lg border border-rose-500/25 bg-rose-500/5 px-2.5 py-2 text-xs text-rose-200">
+                {{ favoriteError() }}
+              </p>
+            }
+            <div class="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                (click)="copyLink()"
+                class="rounded-lg border border-white/10 px-2 py-2 text-xs text-ink-200 transition hover:bg-white/5"
+              >
+                {{ copied() ? i18n.t().copied : i18n.t().copyLink }}
+              </button>
+              <a
+                [href]="imageSrc()"
+                download
+                class="rounded-lg border border-white/10 px-2 py-2 text-center text-xs text-ink-200 transition hover:bg-white/5"
+              >
+                {{ i18n.t().download }}
+              </a>
+            </div>
+            <button
+              type="button"
+              (click)="copyDirectLink()"
+              class="w-full rounded-lg border border-white/10 px-2 py-2 text-xs text-ink-200 transition hover:bg-white/5"
+            >
+              {{ directCopied() ? i18n.t().directCopied : i18n.t().copyDirect }}
+            </button>
+            @if (item.status === 'active') {
+              <button
+                type="button"
+                (click)="openReport()"
+                class="mt-2 w-full rounded-lg border border-white/10 px-2 py-2 text-xs text-ink-400 transition hover:border-rose-400/30 hover:bg-rose-500/5 hover:text-rose-200"
+              >
+                {{ i18n.t().reportPost }}
+              </button>
+
+              @if (reportSent()) {
+                <p
+                  class="mt-2 rounded-lg border border-emerald-400/20 bg-emerald-400/5 px-2.5 py-2 text-xs text-emerald-200"
+                >
+                  {{ i18n.t().reportSent }}
+                </p>
+              }
+              @if (reportError()) {
+                <p
+                  class="mt-2 rounded-lg border border-rose-500/25 bg-rose-500/5 px-2.5 py-2 text-xs text-rose-200"
+                >
+                  {{ reportError() }}
+                </p>
+              }
+
+              @if (reportOpen()) {
+                <form
+                  (submit)="submitReport($event)"
+                  class="mt-2 space-y-2 rounded-xl border border-rose-400/20 bg-rose-500/[0.03] p-3"
+                >
+                  <div class="flex items-center justify-between gap-2">
+                    <p class="text-xs font-semibold text-rose-200">{{ i18n.t().reportTitle }}</p>
+                    <button
+                      type="button"
+                      (click)="closeReport()"
+                      class="text-lg leading-none text-ink-500 transition hover:text-white"
+                      [attr.aria-label]="i18n.t().cancel"
+                    >
+                      ×
+                    </button>
+                  </div>
+                  <label class="block text-[10px] font-mono uppercase tracking-wider text-ink-500">
+                    {{ i18n.t().reportReason }}
+                    <select
+                      [value]="reportReason()"
+                      (change)="onReportReason($event)"
+                      class="mt-1 h-8 w-full rounded-lg border border-white/10 bg-ink-850 px-2 font-mono text-xs normal-case tracking-normal text-ink-200 outline-none focus:border-rose-400/60"
+                    >
+                      @for (reason of reasons; track reason) {
+                        <option [value]="reason">{{ reasonLabel(reason) }}</option>
+                      }
+                    </select>
+                  </label>
+                  <label class="block text-[10px] font-mono uppercase tracking-wider text-ink-500">
+                    {{ i18n.t().reportBody }}
+                    <textarea
+                      [value]="reportBody()"
+                      (input)="onReportBody($event)"
+                      rows="2"
+                      maxlength="1000"
+                      class="mt-1 w-full resize-y rounded-lg border border-white/10 bg-ink-850 px-2 py-1.5 text-xs normal-case tracking-normal text-white outline-none focus:border-rose-400/60"
+                    ></textarea>
+                  </label>
+                  <button
+                    type="submit"
+                    [disabled]="reportSending()"
+                    class="w-full rounded-lg bg-rose-500 px-2.5 py-2 text-xs font-semibold text-white transition hover:bg-rose-600 disabled:opacity-50"
+                  >
+                    {{ reportSending() ? i18n.t().loading : i18n.t().reportSubmit }}
+                  </button>
+                </form>
+              }
+            }
+          </div>
+        </section>
+
+        <section class="rounded-2xl border border-white/8 bg-ink-900/60 p-4">
+          <dl class="grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
+            <div>
+              <dt class="font-mono text-[10px] uppercase tracking-wider text-ink-500">
+                {{ i18n.t().dimensions }}
+              </dt>
+              <dd class="mt-0.5 font-mono text-ink-200">{{ item.width }} × {{ item.height }}</dd>
+            </div>
+            <div>
+              <dt class="font-mono text-[10px] uppercase tracking-wider text-ink-500">
+                {{ i18n.t().size }}
+              </dt>
+              <dd class="mt-0.5 font-mono text-ink-200">{{ humanBytes(item.bytes) }}</dd>
+            </div>
+            <div>
+              <dt class="font-mono text-[10px] uppercase tracking-wider text-ink-500">
+                {{ i18n.t().format }}
+              </dt>
+              <dd class="mt-0.5 font-mono uppercase text-ink-200">{{ item.ext }}</dd>
+            </div>
+            <div>
+              <dt class="font-mono text-[10px] uppercase tracking-wider text-ink-500">
+                {{ i18n.t().uploaded }}
+              </dt>
+              <dd class="mt-0.5 text-ink-200">{{ formatDate(item.createdAt, i18n.locale()) }}</dd>
+            </div>
+          </dl>
+          @if (item.storageKind === 'remote') {
+            <p class="mt-3 border-t border-white/5 pt-2 font-mono text-[10px] text-ink-500">
+              {{ i18n.t().hotlinked }}
+            </p>
+          }
+        </section>
+
+        <section class="rounded-2xl border border-white/8 bg-ink-900/60 p-4">
+          <h2 class="font-mono text-[10px] uppercase tracking-[0.18em] text-ink-500">
+            {{ i18n.t().tags }}
+          </h2>
+          @if (groups().length > 0) {
+            @for (group of groups(); track group.category) {
+              <div class="mt-3 first:mt-2">
+                <div class="flex items-center gap-1.5">
+                  <span
+                    class="h-1.5 w-1.5 rounded-full"
+                    [class]="categoryDot(group.category)"
+                  ></span>
+                  <span class="font-mono text-[10px] uppercase tracking-[0.14em] text-ink-500">{{
+                    categoryLabel(group.category, i18n.t())
+                  }}</span>
+                </div>
+                <div class="mt-1.5 flex flex-wrap gap-1">
+                  @for (tag of group.tags; track tag.name) {
+                    <a
+                      [routerLink]="['/']"
+                      [queryParams]="{ tags: tag.name }"
+                      [class]="
+                        'rounded-md bg-white/[0.04] px-1.5 py-1 font-mono text-[11px] transition hover:bg-white/10 ' +
+                        categoryText(tag.category)
+                      "
+                      >{{ tag.name }}</a
+                    >
+                  }
+                </div>
+              </div>
+            }
+          } @else {
+            <p class="mt-2 text-xs text-ink-500">{{ i18n.t().noTags }}</p>
+          }
+        </section>
+
+        @if (item.parent || item.children.length > 0 || auth.isStaff()) {
+          <section class="rounded-2xl border border-white/8 bg-ink-900/60 p-4">
+            <h2 class="font-mono text-[10px] uppercase tracking-[0.18em] text-ink-500">
+              {{ i18n.t().parentPost }}
+            </h2>
+            @if (item.parent; as parent) {
+              <a
+                [routerLink]="['/post', parent.id]"
+                class="mt-2 flex items-center gap-2 rounded-lg px-1.5 py-1.5 text-xs transition hover:bg-white/5"
+              >
+                <img
+                  [src]="parent.thumbUrl"
+                  [alt]="'#' + parent.id"
+                  class="h-10 w-10 rounded object-cover"
+                  loading="lazy"
+                />
+                <span class="font-mono text-ink-200">#{{ parent.id }}</span>
+              </a>
+            } @else {
+              <p class="mt-2 text-xs text-ink-500">{{ i18n.t().parentNone }}</p>
+            }
+
+            @if (item.children.length > 0) {
+              <h3 class="mt-3 font-mono text-[10px] uppercase tracking-[0.14em] text-ink-500">
+                {{ i18n.t().children }}
+              </h3>
+              <div class="mt-1.5 flex flex-wrap gap-1.5">
+                @for (child of item.children; track child.id) {
+                  <a
+                    [routerLink]="['/post', child.id]"
+                    class="block h-14 w-14 overflow-hidden rounded-lg border border-white/8 transition hover:border-sakura-400/40"
+                  >
+                    <img
+                      [src]="child.thumbUrl"
+                      [alt]="'#' + child.id"
+                      class="h-full w-full object-cover"
+                      loading="lazy"
+                    />
+                  </a>
+                }
+              </div>
+            }
+
+            @if (auth.isStaff()) {
+              <p class="mt-3 text-[11px] leading-snug text-ink-500">{{ i18n.t().parentHint }}</p>
+              <form
+                (submit)="$event.preventDefault(); setParent()"
+                class="mt-2 flex items-center gap-1.5"
+              >
+                <input
+                  type="number"
+                  min="1"
+                  inputmode="numeric"
+                  [value]="parentInput()"
+                  (input)="onParentInput($event)"
+                  [placeholder]="i18n.t().poolPostId"
+                  class="h-8 w-24 rounded-lg border border-white/10 bg-ink-850 px-2 font-mono text-xs text-ink-200 outline-none focus:border-sakura-400/60"
+                />
+                <button
+                  type="submit"
+                  [disabled]="parentSaving()"
+                  class="h-8 rounded-lg bg-sakura-500/20 px-2 text-[11px] font-semibold text-sakura-200 transition hover:bg-sakura-500/30 disabled:opacity-50"
+                >
+                  {{ i18n.t().parentSet }}
+                </button>
+                @if (item.parent) {
+                  <button
+                    type="button"
+                    (click)="parentInput.set(''); setParent()"
+                    class="h-8 rounded-lg border border-white/10 px-2 text-[11px] text-ink-300 transition hover:bg-white/5"
+                  >
+                    {{ i18n.t().parentClear }}
+                  </button>
+                }
+              </form>
+              @if (parentError()) {
+                <p class="mt-1.5 text-[11px] text-rose-300">{{ parentError() }}</p>
+              }
+            }
+          </section>
+        }
+
+        @if (sourceLinks().length > 0) {
+          <section class="rounded-2xl border border-white/8 bg-ink-900/60 p-4">
+            <h2 class="font-mono text-[10px] uppercase tracking-[0.18em] text-ink-500">
+              {{ i18n.t().sources }}
+            </h2>
+            <ul class="mt-2 space-y-1">
+              @for (link of sourceLinks(); track link.url) {
+                <li>
+                  <a
+                    [href]="link.url"
+                    [title]="link.url"
+                    target="_blank"
+                    rel="noopener"
+                    class="flex items-center gap-2 rounded-lg px-1.5 py-1.5 text-xs transition hover:bg-white/5"
+                  >
+                    <span
+                      [class]="'h-1.5 w-1.5 shrink-0 rounded-full ' + sourceDot(link.status)"
+                    ></span>
+                    <span class="truncate font-mono text-ink-200">{{ link.label }}</span>
+                    <span class="ml-auto shrink-0 font-mono text-[10px] uppercase text-ink-500">{{
+                      link.role === 'mirror' ? i18n.t().mirror : i18n.t().source
+                    }}</span>
+                  </a>
+                </li>
+              }
+            </ul>
+          </section>
+        }
+      </aside>
+    </div>
+
+    @if (related().length > 0) {
+      <section class="mt-6">
+        <h2 class="font-mono text-[10px] uppercase tracking-[0.18em] text-ink-500">
+          {{ i18n.t().related }}
+        </h2>
+        <div class="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6 xl:grid-cols-8">
+          @for (post of related(); track post.id) {
+            <a
+              [routerLink]="['/post', post.id]"
+              [title]="i18n.t().relatedShared + ': ' + post.sharedTags.join(', ')"
+              class="group relative aspect-square overflow-hidden rounded-xl border border-white/8 bg-ink-850"
+            >
+              <img
+                [src]="post.thumbUrl"
+                [alt]="postAlt(post.tags, post.id)"
+                loading="lazy"
+                class="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
+                draggable="false"
+              />
+              <span
+                class="absolute bottom-1 left-1 rounded bg-black/60 px-1 font-mono text-[10px] uppercase text-white/80"
+                >{{ post.rating }}</span
+              >
+            </a>
+          }
+        </div>
+      </section>
+    }
+
+    @if (item.status === 'active') {
+      <app-comments class="mt-5 block" [postId]="item.id" [initialTotal]="item.commentCount" />
+    }
+
+    @if (lightbox()) {
+      <app-lightbox
+        [src]="imageSrc()"
+        [alt]="postAlt(item.tags, item.id)"
+        (close)="lightbox.set(false)"
+      />
+    }
+  }
+</div>

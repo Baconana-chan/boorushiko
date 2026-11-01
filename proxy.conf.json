@@ -1,0 +1,12 @@
+{
+  "/api/**": { "target": "http://127.0.0.1:3000", "secure": false },
+  "/i/*": { "target": "http://127.0.0.1:3000", "secure": false },
+  "/t/*": { "target": "http://127.0.0.1:3000", "secure": false },
+  "/healthz": { "target": "http://127.0.0.1:3000", "secure": false },
+  "/robots.txt": { "target": "http://127.0.0.1:3000", "secure": false },
+  "/feed.xml": { "target": "http://127.0.0.1:3000", "secure": false },
+  "/.well-known/security.txt": { "target": "http://127.0.0.1:3000", "secure": false },
+  "/sitemap.xml": { "target": "http://127.0.0.1:3000", "secure": false },
+  "/sitemap-pages.xml": { "target": "http://127.0.0.1:3000", "secure": false },
+  "/sitemap-posts-*": { "target": "http://127.0.0.1:3000", "secure": false }
+}

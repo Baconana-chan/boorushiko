@@ -1,0 +1,79 @@
+# Boorushiko behind Caddy. Replace booru.example with the real domain, then:
+#   caddy validate --config deploy/Caddyfile
+#   sudo cp deploy/Caddyfile /etc/caddy/Caddyfile && sudo systemctl reload caddy
+#
+# The engine listens on 127.0.0.1:3000 and never serves the Angular bundle itself:
+# Caddy serves dist/boorushiko/browser and proxies the dynamic routes to Fastify.
+
+{
+	# email ops@your-domain.example
+	# Uncomment to test against the staging CA instead of production Let's Encrypt.
+	# acme_ca https://acme-staging-v02.api.letsencrypt.org/directory
+}
+
+booru.example {
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
+		# Angular needs 'unsafe-inline' for its style bindings; scripts stay self-only.
+		# img-src https: is required because /i/:id redirects to external mirrors.
+		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https: data: blob:; media-src 'self' https:; connect-src 'self'; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+		-Server
+	}
+
+	# Content-hashed Angular output can be cached for a year.
+	@hashed path /main-*.js /chunk-*.js /polyfills-*.js /styles-*.css
+	header @hashed Cache-Control "public, max-age=31536000, immutable"
+
+	# Engine routes: API, media redirects/proxies and crawler documents.
+	handle /api/* {
+		reverse_proxy 127.0.0.1:3000
+	}
+	handle /i/* {
+		reverse_proxy 127.0.0.1:3000
+	}
+	handle /t/* {
+		reverse_proxy 127.0.0.1:3000
+	}
+	handle /healthz {
+		reverse_proxy 127.0.0.1:3000
+	}
+	handle /readyz {
+		reverse_proxy 127.0.0.1:3000
+	}
+	handle /feed.xml {
+		reverse_proxy 127.0.0.1:3000
+	}
+
+	# A shared /post/:id link: chat and search crawlers get the OG meta document,
+	# people get the Angular app from the SPA fallback below.
+	@crawler {
+		path /post/*
+		header_regexp User-Agent (?i)(bot|crawler|spider|facebookexternalhit|twitterbot|telegram|discord|slack|whatsapp|pinterest|embedly|linkedin|reddit|applebot|bingpreview|preview)
+	}
+	handle @crawler {
+		reverse_proxy 127.0.0.1:3000
+	}
+
+	handle /robots.txt {
+		reverse_proxy 127.0.0.1:3000
+	}
+	handle /sitemap*.xml {
+		reverse_proxy 127.0.0.1:3000
+	}
+	handle /.well-known/* {
+		reverse_proxy 127.0.0.1:3000
+	}
+
+	# SPA: real files first, everything else falls back to index.html.
+	handle {
+		root * /srv/boorushiko/browser
+		try_files {path} /index.html
+		file_server
+		header Cache-Control "no-cache"
+	}
+}

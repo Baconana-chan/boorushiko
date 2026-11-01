@@ -1,0 +1,119 @@
+<div class="mx-auto flex min-h-[70vh] max-w-md items-center px-4 py-10">
+  <div
+    class="w-full rounded-2xl border border-white/8 bg-ink-900/60 p-6 shadow-2xl shadow-black/30"
+  >
+    <div
+      class="mb-5 flex rounded-xl border border-white/8 bg-ink-850 p-1"
+      role="tablist"
+      [attr.aria-label]="i18n.t().account"
+    >
+      <button
+        type="button"
+        role="tab"
+        [attr.aria-selected]="mode() === 'login'"
+        [class]="tabClass('login')"
+        (click)="switchMode('login')"
+      >
+        {{ i18n.t().login }}
+      </button>
+      <button
+        type="button"
+        role="tab"
+        [attr.aria-selected]="mode() === 'register'"
+        [class]="tabClass('register')"
+        (click)="switchMode('register')"
+      >
+        {{ i18n.t().register }}
+      </button>
+    </div>
+
+    <h1 class="text-xl font-bold text-white">
+      {{ mode() === 'login' ? i18n.t().authLoginTitle : i18n.t().authRegisterTitle }}
+    </h1>
+    <p class="mt-1 text-sm leading-relaxed text-ink-400">
+      {{ mode() === 'login' ? i18n.t().authLoginSubtitle : i18n.t().authRegisterSubtitle }}
+    </p>
+
+    <form class="mt-5 space-y-4" (submit)="submit($event)">
+      <label class="block">
+        <span class="mb-1.5 block font-mono text-[10px] uppercase tracking-[0.16em] text-ink-500">
+          {{ i18n.t().username }}
+        </span>
+        <input
+          type="text"
+          [value]="username()"
+          (input)="onUsername($event)"
+          maxlength="24"
+          autocomplete="username"
+          spellcheck="false"
+          required
+          class="h-10 w-full rounded-lg border border-white/10 bg-ink-850 px-3 font-mono text-sm text-white outline-none transition placeholder:text-ink-600 focus:border-sakura-500/60 focus:ring-2 focus:ring-sakura-500/20"
+        />
+        <span class="mt-1 block text-[11px] text-ink-500">{{ i18n.t().usernameHint }}</span>
+      </label>
+
+      <label class="block">
+        <span class="mb-1.5 block font-mono text-[10px] uppercase tracking-[0.16em] text-ink-500">
+          {{ i18n.t().password }}
+        </span>
+        <input
+          type="password"
+          [value]="password()"
+          (input)="onPassword($event)"
+          maxlength="200"
+          [attr.autocomplete]="mode() === 'login' ? 'current-password' : 'new-password'"
+          required
+          class="h-10 w-full rounded-lg border border-white/10 bg-ink-850 px-3 text-sm text-white outline-none transition focus:border-sakura-500/60 focus:ring-2 focus:ring-sakura-500/20"
+        />
+        <span class="mt-1 block text-[11px] text-ink-500">{{ i18n.t().passwordHint }}</span>
+      </label>
+
+      @if (mode() === 'register') {
+        <label class="block">
+          <span class="mb-1.5 block font-mono text-[10px] uppercase tracking-[0.16em] text-ink-500">
+            {{ i18n.t().confirmPassword }}
+          </span>
+          <input
+            type="password"
+            [value]="confirm()"
+            (input)="onConfirm($event)"
+            maxlength="200"
+            autocomplete="new-password"
+            required
+            class="h-10 w-full rounded-lg border border-white/10 bg-ink-850 px-3 text-sm text-white outline-none transition focus:border-sakura-500/60 focus:ring-2 focus:ring-sakura-500/20"
+          />
+        </label>
+      }
+
+      @if (error()) {
+        <p
+          role="alert"
+          class="rounded-lg border border-rose-500/25 bg-rose-500/5 px-3 py-2 text-xs leading-relaxed text-rose-200"
+        >
+          {{ error() }}
+        </p>
+      }
+
+      <button
+        type="submit"
+        [disabled]="submitting()"
+        class="w-full rounded-lg bg-sakura-500 px-3 py-2.5 text-sm font-semibold text-white transition hover:bg-sakura-600 disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        {{
+          submitting() ? i18n.t().loading : mode() === 'login' ? i18n.t().login : i18n.t().register
+        }}
+      </button>
+    </form>
+
+    <p class="mt-4 text-center text-xs text-ink-500">
+      {{ mode() === 'login' ? i18n.t().authNoAccount : i18n.t().authHaveAccount }}
+      <button
+        type="button"
+        (click)="switchMode(mode() === 'login' ? 'register' : 'login')"
+        class="font-semibold text-sakura-300 transition hover:text-sakura-200"
+      >
+        {{ mode() === 'login' ? i18n.t().register : i18n.t().login }}
+      </button>
+    </p>
+  </div>
+</div>

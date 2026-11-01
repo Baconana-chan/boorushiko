@@ -1,0 +1,1265 @@
+<div class="mx-auto max-w-[1500px] px-3 py-5 sm:px-5">
+  <a
+    routerLink="/"
+    class="inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-500 transition hover:text-ink-200"
+  >
+    ← {{ i18n.t().backHome }}
+  </a>
+
+  <header class="mt-4 flex flex-wrap items-end justify-between gap-3 border-b border-white/8 pb-5">
+    <div>
+      <p class="font-mono text-[10px] uppercase tracking-[0.2em] text-sakura-400/80">Boorushiko</p>
+      <h1 class="mt-1 text-2xl font-black tracking-tight text-white sm:text-3xl">
+        {{ i18n.t().admin }}
+      </h1>
+      <p class="mt-1 max-w-xl text-xs text-ink-500">{{ i18n.t().adminFlaggedMeta }}</p>
+    </div>
+    <button
+      type="button"
+      (click)="refreshAll()"
+      class="rounded-lg border border-white/10 bg-ink-900/70 px-3 py-2 font-mono text-[10px] uppercase tracking-wider text-ink-300 transition hover:border-sakura-500/40 hover:text-white"
+    >
+      {{ i18n.t().adminRefresh }}
+    </button>
+  </header>
+
+  @if (!auth.ready()) {
+    <div class="mt-5 grid gap-3 sm:grid-cols-4">
+      @for (item of [0, 1, 2, 3]; track item) {
+        <div class="h-20 animate-pulse rounded-2xl border border-white/8 bg-ink-900/60"></div>
+      }
+    </div>
+  } @else if (!auth.isStaff()) {
+    <div class="mt-8 rounded-2xl border border-rose-500/25 bg-rose-500/5 px-6 py-16 text-center">
+      <h2 class="text-lg font-semibold text-rose-200">{{ i18n.t().adminForbidden }}</h2>
+      <a
+        routerLink="/"
+        class="mt-4 inline-block rounded-lg border border-white/10 px-3 py-2 text-sm text-ink-200 transition hover:bg-white/5"
+        >{{ i18n.t().backHome }}</a
+      >
+    </div>
+  } @else {
+    @if (overview(); as data) {
+      <div class="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <button
+          type="button"
+          (click)="openPending()"
+          class="rounded-2xl border border-amber-400/20 bg-amber-400/5 p-3 text-left transition hover:border-amber-400/40"
+        >
+          <span class="font-mono text-[10px] uppercase tracking-wider text-amber-300/80">{{
+            i18n.t().adminOverviewPending
+          }}</span>
+          <span class="mt-1 block font-mono text-2xl font-bold text-amber-200">{{
+            data.posts.pending
+          }}</span>
+        </button>
+        <button
+          type="button"
+          (click)="setTab('reports')"
+          class="rounded-2xl border border-rose-400/20 bg-rose-400/5 p-3 text-left transition hover:border-rose-400/40"
+        >
+          <span class="font-mono text-[10px] uppercase tracking-wider text-rose-300/80">{{
+            i18n.t().adminOverviewReports
+          }}</span>
+          <span class="mt-1 block font-mono text-2xl font-bold text-rose-200">{{
+            data.openReports
+          }}</span>
+        </button>
+        <button
+          type="button"
+          (click)="setTab('dnp')"
+          class="rounded-2xl border border-sky-400/20 bg-sky-400/5 p-3 text-left transition hover:border-sky-400/40"
+        >
+          <span class="font-mono text-[10px] uppercase tracking-wider text-sky-300/80">{{
+            i18n.t().adminOverviewDnp
+          }}</span>
+          <span class="mt-1 block font-mono text-2xl font-bold text-sky-200">{{ data.dnp }}</span>
+        </button>
+        <div class="rounded-2xl border border-white/8 bg-ink-900/60 p-3">
+          <span class="font-mono text-[10px] uppercase tracking-wider text-ink-500">{{
+            i18n.t().adminOverviewFlagged
+          }}</span>
+          <span class="mt-1 block font-mono text-2xl font-bold text-sakura-200">{{
+            data.flaggedPending
+          }}</span>
+        </div>
+      </div>
+    }
+
+    <nav class="mt-5 flex flex-wrap gap-1 rounded-xl border border-white/8 bg-ink-900/50 p-1">
+      <button type="button" (click)="setTab('queue')" [class]="tabClass('queue')">
+        {{ i18n.t().adminQueue }}
+        @if (overview(); as data) {
+          <span class="ml-1 opacity-60">{{ data.posts.pending }}</span>
+        }
+      </button>
+      <button type="button" (click)="setTab('reports')" [class]="tabClass('reports')">
+        {{ i18n.t().adminReports }}
+        @if (overview(); as data) {
+          <span class="ml-1 opacity-60">{{ data.openReports }}</span>
+        }
+      </button>
+      <button type="button" (click)="setTab('dnp')" [class]="tabClass('dnp')">
+        {{ i18n.t().adminDnp }}
+      </button>
+      <button type="button" (click)="setTab('uploaders')" [class]="tabClass('uploaders')">
+        {{ i18n.t().uploaderRequests }}
+        @if (overview(); as data) {
+          @if (data.pendingUploaderRequests > 0) {
+            <span class="ml-1 opacity-60">{{ data.pendingUploaderRequests }}</span>
+          }
+        }
+      </button>
+      <button type="button" (click)="setTab('sources')" [class]="tabClass('sources')">
+        {{ i18n.t().adminSources }}
+        @if (activeSourceCount() > 0) {
+          <span class="ml-1 rounded bg-sky-500/20 px-1 text-[9px] text-sky-300">{{
+            activeSourceCount()
+          }}</span>
+        }
+      </button>
+      <button type="button" (click)="setTab('audit')" [class]="tabClass('audit')">
+        {{ i18n.t().adminAudit }}
+      </button>
+    </nav>
+
+    @if (notice()) {
+      <p
+        role="alert"
+        class="mt-3 rounded-xl border border-amber-400/25 bg-amber-400/5 px-3 py-2 text-xs text-amber-200"
+      >
+        {{ notice() }}
+      </p>
+    }
+
+    @switch (tab()) {
+      @case ('queue') {
+        <section class="mt-4">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="flex flex-wrap gap-1">
+              @for (status of queueStatuses; track status) {
+                <button
+                  type="button"
+                  (click)="setQueueStatus(status)"
+                  [class]="
+                    'rounded-lg px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-wider transition ' +
+                    (queueStatus() === status
+                      ? 'bg-white/10 text-white'
+                      : 'text-ink-500 hover:bg-white/5 hover:text-ink-200')
+                  "
+                >
+                  {{ statusLabel(status) }}
+                </button>
+              }
+            </div>
+            <span class="font-mono text-[10px] uppercase tracking-wider text-ink-500"
+              >{{ queueTotal() }} {{ i18n.t().posts }}</span
+            >
+          </div>
+
+          @if (queueError()) {
+            <div
+              class="mt-3 rounded-2xl border border-rose-500/25 bg-rose-500/5 px-6 py-10 text-center"
+            >
+              <p class="text-sm text-rose-200">{{ i18n.t().errorText }}</p>
+            </div>
+          } @else if (queueLoading() && queue().length === 0) {
+            <div class="mt-3 space-y-2">
+              @for (item of [0, 1, 2]; track item) {
+                <div
+                  class="h-32 animate-pulse rounded-2xl border border-white/8 bg-ink-900/60"
+                ></div>
+              }
+            </div>
+          } @else if (queue().length === 0) {
+            <div
+              class="mt-3 rounded-2xl border border-white/8 bg-ink-900/40 px-6 py-14 text-center"
+            >
+              <p class="text-sm text-ink-400">{{ i18n.t().adminNoQueue }}</p>
+            </div>
+          } @else {
+            <div class="mt-3 space-y-2">
+              @for (post of queue(); track post.id) {
+                <article class="overflow-hidden rounded-2xl border border-white/8 bg-ink-900/60">
+                  <div class="flex gap-3 p-3">
+                    <a
+                      [routerLink]="['/post', post.id]"
+                      class="checker flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/8"
+                    >
+                      <img
+                        [src]="post.thumbUrl"
+                        [alt]="'#' + post.id"
+                        loading="lazy"
+                        class="h-full w-full object-cover"
+                      />
+                    </a>
+
+                    <div class="min-w-0 flex-1">
+                      <div class="flex flex-wrap items-center gap-2">
+                        <a
+                          [routerLink]="['/post', post.id]"
+                          class="font-mono text-sm font-bold text-white transition hover:text-sakura-200"
+                          >#{{ post.id }}</a
+                        >
+                        <span
+                          [class]="
+                            'rounded px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider ring-1 ring-inset ' +
+                            statusClass(post.status)
+                          "
+                          >{{ statusLabel(post.status) }}</span
+                        >
+                        <span
+                          class="rounded bg-white/5 px-1.5 py-0.5 font-mono text-[9px] text-ink-300"
+                          >{{ post.rating }}</span
+                        >
+                        @if (post.reportCount > 0) {
+                          <span
+                            class="rounded bg-rose-500/15 px-1.5 py-0.5 font-mono text-[9px] text-rose-300"
+                            >{{ post.reportCount }} {{ i18n.t().adminReportsCount }}</span
+                          >
+                        }
+                      </div>
+
+                      <p class="mt-1 truncate font-mono text-[11px] text-ink-400">
+                        @for (tag of post.tags.slice(0, 10); track tag.name) {
+                          <span class="mr-1">#{{ tag.name }}</span>
+                        }
+                        @if (post.tags.length === 0) {
+                          <span>{{ i18n.t().noTags }}</span>
+                        }
+                      </p>
+
+                      <p class="mt-1 font-mono text-[10px] text-ink-500">
+                        {{ post.width }}×{{ post.height }} · {{ humanBytes(post.bytes) }} ·
+                        {{ post.storageKind }} · {{ post.sourceCount }}
+                        {{ i18n.t().adminSources }} · {{ post.originCount }} origins · @{{
+                          post.uploadedBy ?? '—'
+                        }}
+                      </p>
+
+                      @if (post.policyFlags.length > 0) {
+                        <div class="mt-1.5 flex flex-wrap gap-1">
+                          @for (flag of post.policyFlags; track flag) {
+                            <span
+                              class="rounded bg-amber-400/10 px-1.5 py-0.5 font-mono text-[9px] text-amber-300 ring-1 ring-inset ring-amber-400/20"
+                              >{{ flagLabel(flag) }}</span
+                            >
+                          }
+                        </div>
+                      }
+
+                      @if (post.rejectionReason) {
+                        <p class="mt-1 font-mono text-[10px] text-rose-300">
+                          {{ reasonLabel(post.rejectionReason) }}
+                          @if (post.moderationNote) {
+                            <span class="text-ink-500">— {{ post.moderationNote }}</span>
+                          }
+                        </p>
+                      }
+
+                      <div class="mt-2 flex flex-wrap items-center gap-1.5">
+                        <select
+                          [value]="post.rating"
+                          (change)="changeRating(post, $event)"
+                          [disabled]="busyId() !== null"
+                          [attr.aria-label]="i18n.t().adminRating"
+                          class="h-7 rounded-lg border border-white/10 bg-ink-850 px-1.5 font-mono text-[10px] uppercase text-ink-200 outline-none focus:border-sakura-500/60 disabled:opacity-50"
+                        >
+                          <option value="s">S</option>
+                          <option value="q">Q</option>
+                          <option value="e">E</option>
+                        </select>
+                        @if (post.status !== 'active') {
+                          <button
+                            type="button"
+                            (click)="approve(post)"
+                            [disabled]="busyId() !== null"
+                            class="rounded-lg bg-emerald-500/15 px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-wider text-emerald-300 transition hover:bg-emerald-500/25 disabled:opacity-50"
+                          >
+                            {{ i18n.t().adminApprove }}
+                          </button>
+                        }
+                        @if (post.status !== 'hidden') {
+                          <button
+                            type="button"
+                            (click)="startReject(post)"
+                            [disabled]="busyId() !== null"
+                            class="rounded-lg bg-rose-500/15 px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-wider text-rose-300 transition hover:bg-rose-500/25 disabled:opacity-50"
+                          >
+                            {{ i18n.t().adminReject }}
+                          </button>
+                        }
+                        <a
+                          [routerLink]="['/post', post.id]"
+                          class="ml-auto rounded-lg px-2 py-1.5 font-mono text-[10px] uppercase tracking-wider text-ink-500 transition hover:bg-white/5 hover:text-ink-200"
+                          >{{ i18n.t().openOriginal }}</a
+                        >
+                      </div>
+                    </div>
+                  </div>
+
+                  @if (rejectTarget()?.id === post.id) {
+                    <div class="border-t border-white/5 bg-rose-500/[0.03] p-3">
+                      <div class="grid gap-2 sm:grid-cols-[220px_minmax(0,1fr)]">
+                        <label class="text-[11px] text-ink-400">
+                          {{ i18n.t().adminReason }}
+                          <select
+                            [value]="rejectReason()"
+                            (change)="onRejectReason($event)"
+                            class="mt-1 h-8 w-full rounded-lg border border-white/10 bg-ink-850 px-2 text-xs text-ink-200 outline-none focus:border-rose-400/60"
+                          >
+                            @for (reason of reasons; track reason) {
+                              <option [value]="reason">{{ reasonLabel(reason) }}</option>
+                            }
+                          </select>
+                        </label>
+                        <label class="text-[11px] text-ink-400">
+                          {{ i18n.t().adminNote }}
+                          <textarea
+                            [value]="rejectNote()"
+                            (input)="onRejectNote($event)"
+                            rows="2"
+                            maxlength="1000"
+                            class="mt-1 w-full resize-y rounded-lg border border-white/10 bg-ink-850 px-2 py-1.5 text-xs text-white outline-none focus:border-rose-400/60"
+                          ></textarea>
+                        </label>
+                      </div>
+                      <div class="mt-2 flex justify-end gap-2">
+                        <button
+                          type="button"
+                          (click)="cancelReject()"
+                          class="rounded-lg border border-white/10 px-2.5 py-1.5 text-xs text-ink-300 transition hover:bg-white/5"
+                        >
+                          {{ i18n.t().cancel }}
+                        </button>
+                        <button
+                          type="button"
+                          (click)="confirmReject()"
+                          [disabled]="busyId() !== null"
+                          class="rounded-lg bg-rose-500 px-2.5 py-1.5 text-xs font-semibold text-white transition hover:bg-rose-600 disabled:opacity-50"
+                        >
+                          {{ i18n.t().adminRejectConfirm }}
+                        </button>
+                      </div>
+                    </div>
+                  }
+                </article>
+              }
+            </div>
+            @if (queueHasMore()) {
+              <div class="flex justify-center pt-3">
+                <button
+                  type="button"
+                  (click)="loadMoreQueue()"
+                  [disabled]="queueLoading()"
+                  class="rounded-xl border border-white/10 bg-ink-900/70 px-4 py-2 text-sm text-ink-200 transition hover:border-sakura-500/40 hover:text-white disabled:opacity-50"
+                >
+                  {{ queueLoading() ? i18n.t().loading : i18n.t().loadMore }}
+                </button>
+              </div>
+            }
+          }
+        </section>
+      }
+
+      @case ('reports') {
+        <section class="mt-4">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="flex gap-1">
+              <button
+                type="button"
+                (click)="setReportStatus('open')"
+                [class]="
+                  'rounded-lg px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-wider transition ' +
+                  (reportStatus() === 'open'
+                    ? 'bg-white/10 text-white'
+                    : 'text-ink-500 hover:bg-white/5 hover:text-ink-200')
+                "
+              >
+                {{ i18n.t().adminOpen }}
+              </button>
+              <button
+                type="button"
+                (click)="setReportStatus('all')"
+                [class]="
+                  'rounded-lg px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-wider transition ' +
+                  (reportStatus() === 'all'
+                    ? 'bg-white/10 text-white'
+                    : 'text-ink-500 hover:bg-white/5 hover:text-ink-200')
+                "
+              >
+                {{ i18n.t().adminAll }}
+              </button>
+            </div>
+          </div>
+
+          @if (reportsError()) {
+            <div
+              class="mt-3 rounded-2xl border border-rose-500/25 bg-rose-500/5 px-6 py-10 text-center"
+            >
+              <p class="text-sm text-rose-200">{{ i18n.t().errorText }}</p>
+            </div>
+          } @else if (reportsLoading() && reports().length === 0) {
+            <div class="mt-3 space-y-2">
+              @for (item of [0, 1]; track item) {
+                <div
+                  class="h-28 animate-pulse rounded-2xl border border-white/8 bg-ink-900/60"
+                ></div>
+              }
+            </div>
+          } @else if (reports().length === 0) {
+            <div
+              class="mt-3 rounded-2xl border border-white/8 bg-ink-900/40 px-6 py-14 text-center"
+            >
+              <p class="text-sm text-ink-400">{{ i18n.t().adminNoReports }}</p>
+            </div>
+          } @else {
+            <div class="mt-3 space-y-2">
+              @for (report of reports(); track report.id) {
+                <article class="rounded-2xl border border-white/8 bg-ink-900/60 p-3">
+                  <div class="flex gap-3">
+                    <a
+                      [routerLink]="['/post', report.post.id]"
+                      class="checker flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/8"
+                    >
+                      <img
+                        [src]="report.post.thumbUrl"
+                        [alt]="'#' + report.post.id"
+                        loading="lazy"
+                        class="h-full w-full object-cover"
+                      />
+                    </a>
+                    <div class="min-w-0 flex-1">
+                      <div class="flex flex-wrap items-center gap-2">
+                        <a
+                          [routerLink]="['/post', report.post.id]"
+                          class="font-mono text-sm font-bold text-white transition hover:text-sakura-200"
+                          >#{{ report.post.id }}</a
+                        >
+                        <span
+                          class="rounded bg-rose-500/15 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider text-rose-300"
+                          >{{ reportReason(report) }}</span
+                        >
+                        <span
+                          [class]="
+                            'rounded px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider ring-1 ring-inset ' +
+                            (report.status === 'open'
+                              ? 'bg-amber-400/10 text-amber-300 ring-amber-400/20'
+                              : 'bg-white/5 text-ink-400 ring-white/10')
+                          "
+                          >{{ reportStatusLabel(report.status) }}</span
+                        >
+                        <span class="font-mono text-[10px] text-ink-500">{{
+                          formatDateTime(report.createdAt, i18n.locale())
+                        }}</span>
+                      </div>
+                      <p class="mt-1 font-mono text-[10px] text-ink-500">
+                        {{ i18n.t().adminReportReporter }}:
+                        <span class="text-ink-300">@{{ report.reporter ?? '—' }}</span>
+                        · {{ report.post.status }} · {{ report.post.rating }}
+                      </p>
+                      @if (report.body) {
+                        <p
+                          class="mt-1 whitespace-pre-line break-words text-xs leading-relaxed text-ink-300"
+                        >
+                          {{ report.body }}
+                        </p>
+                      }
+                      @if (report.status === 'open') {
+                        <div class="mt-2 flex flex-wrap gap-1.5">
+                          <button
+                            type="button"
+                            (click)="resolveReport(report, 'resolved')"
+                            [disabled]="reportBusyId() !== null"
+                            class="rounded-lg bg-emerald-500/15 px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-wider text-emerald-300 transition hover:bg-emerald-500/25 disabled:opacity-50"
+                          >
+                            {{ i18n.t().adminReportResolve }}
+                          </button>
+                          <button
+                            type="button"
+                            (click)="resolveReport(report, 'resolved', true)"
+                            [disabled]="reportBusyId() !== null"
+                            class="rounded-lg bg-rose-500/15 px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-wider text-rose-300 transition hover:bg-rose-500/25 disabled:opacity-50"
+                          >
+                            {{ i18n.t().adminReportHideResolve }}
+                          </button>
+                          <button
+                            type="button"
+                            (click)="resolveReport(report, 'dismissed')"
+                            [disabled]="reportBusyId() !== null"
+                            class="rounded-lg border border-white/10 px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-wider text-ink-400 transition hover:bg-white/5 disabled:opacity-50"
+                          >
+                            {{ i18n.t().adminReportDismiss }}
+                          </button>
+                        </div>
+                      } @else {
+                        <p class="mt-1 font-mono text-[10px] text-ink-500">
+                          {{ report.resolvedBy ? '@' + report.resolvedBy : '—' }} ·
+                          {{
+                            report.resolvedAt
+                              ? formatDateTime(report.resolvedAt, i18n.locale())
+                              : ''
+                          }}
+                        </p>
+                      }
+                    </div>
+                  </div>
+                </article>
+              }
+            </div>
+          }
+        </section>
+      }
+
+      @case ('dnp') {
+        <section class="mt-4">
+          <form
+            (submit)="addDnp($event)"
+            class="grid gap-2 rounded-2xl border border-white/8 bg-ink-900/60 p-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto]"
+          >
+            <label class="text-[11px] text-ink-400">
+              {{ i18n.t().adminDnpName }}
+              <input
+                [value]="dnpName()"
+                (input)="onDnpName($event)"
+                maxlength="100"
+                placeholder="artist_name"
+                class="mt-1 h-8 w-full rounded-lg border border-white/10 bg-ink-850 px-2 font-mono text-xs text-white outline-none placeholder:text-ink-600 focus:border-sakura-500/60"
+              />
+            </label>
+            <label class="text-[11px] text-ink-400">
+              {{ i18n.t().adminDnpSource }}
+              <input
+                [value]="dnpSource()"
+                (input)="onDnpSource($event)"
+                maxlength="300"
+                placeholder="pixiv.net/users/…"
+                class="mt-1 h-8 w-full rounded-lg border border-white/10 bg-ink-850 px-2 font-mono text-xs text-white outline-none placeholder:text-ink-600 focus:border-sakura-500/60"
+              />
+            </label>
+            <label class="text-[11px] text-ink-400">
+              {{ i18n.t().adminDnpNote }}
+              <input
+                [value]="dnpNote()"
+                (input)="onDnpNote($event)"
+                maxlength="500"
+                class="mt-1 h-8 w-full rounded-lg border border-white/10 bg-ink-850 px-2 text-xs text-white outline-none focus:border-sakura-500/60"
+              />
+            </label>
+            <button
+              type="submit"
+              [disabled]="dnpSaving() || !dnpName().trim()"
+              class="self-end rounded-lg bg-sakura-500 px-3 py-2 text-xs font-semibold text-white transition hover:bg-sakura-600 disabled:opacity-50"
+            >
+              {{ i18n.t().adminAdd }}
+            </button>
+          </form>
+
+          @if (dnpError()) {
+            <div
+              class="mt-3 rounded-2xl border border-rose-500/25 bg-rose-500/5 px-6 py-10 text-center"
+            >
+              <p class="text-sm text-rose-200">{{ i18n.t().errorText }}</p>
+            </div>
+          } @else if (dnpLoading() && dnp().length === 0) {
+            <div
+              class="mt-3 h-24 animate-pulse rounded-2xl border border-white/8 bg-ink-900/60"
+            ></div>
+          } @else if (dnp().length === 0) {
+            <div
+              class="mt-3 rounded-2xl border border-white/8 bg-ink-900/40 px-6 py-14 text-center"
+            >
+              <p class="text-sm text-ink-400">{{ i18n.t().adminNoDnp }}</p>
+            </div>
+          } @else {
+            <ul class="mt-3 space-y-2">
+              @for (entry of dnp(); track entry.id) {
+                <li class="rounded-2xl border border-white/8 bg-ink-900/60 p-3">
+                  <div class="flex flex-wrap items-start gap-2">
+                    <div class="min-w-0 flex-1">
+                      <p class="font-mono text-sm text-white">{{ entry.name }}</p>
+                      @if (entry.sourcePattern) {
+                        <p class="mt-0.5 truncate font-mono text-[10px] text-ink-500">
+                          {{ entry.sourcePattern }}
+                        </p>
+                      }
+                      @if (entry.note) {
+                        <p class="mt-1 text-xs text-ink-400">{{ entry.note }}</p>
+                      }
+                      <p class="mt-1 font-mono text-[10px] text-ink-600">
+                        @{{ entry.createdBy ?? '—' }} ·
+                        {{ formatDate(entry.createdAt, i18n.locale()) }}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      (click)="removeDnp(entry)"
+                      [disabled]="dnpSaving()"
+                      class="rounded-lg border border-rose-400/25 px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-wider text-rose-300 transition hover:bg-rose-500/10 disabled:opacity-50"
+                    >
+                      {{ i18n.t().adminRemove }}
+                    </button>
+                  </div>
+                </li>
+              }
+            </ul>
+          }
+        </section>
+      }
+
+      @case ('uploaders') {
+        <section class="mt-4 space-y-5">
+          <div>
+            <div class="flex items-center justify-between gap-2">
+              <h2 class="font-mono text-[10px] uppercase tracking-[0.18em] text-ink-500">
+                {{ i18n.t().uploaderRequests }}
+              </h2>
+              @if (uploaderRequests().length > 0) {
+                <span class="font-mono text-[10px] uppercase tracking-wider text-ink-500">
+                  {{ uploaderRequests().length }}
+                </span>
+              }
+            </div>
+
+            @if (uploaderError()) {
+              <div
+                class="mt-3 rounded-2xl border border-rose-500/25 bg-rose-500/5 px-6 py-10 text-center"
+              >
+                <p class="text-sm text-rose-200">{{ i18n.t().errorText }}</p>
+              </div>
+            } @else if (uploaderLoading() && uploaderRequests().length === 0) {
+              <div class="mt-3 space-y-2">
+                @for (item of [0, 1]; track item) {
+                  <div
+                    class="h-28 animate-pulse rounded-2xl border border-white/8 bg-ink-900/60"
+                  ></div>
+                }
+              </div>
+            } @else if (uploaderRequests().length === 0) {
+              <div
+                class="mt-3 rounded-2xl border border-white/8 bg-ink-900/40 px-6 py-12 text-center"
+              >
+                <p class="text-sm text-ink-400">{{ i18n.t().uploaderRequestsEmpty }}</p>
+              </div>
+            } @else {
+              <ul class="mt-3 space-y-2">
+                @for (request of uploaderRequests(); track request.id) {
+                  <li class="rounded-2xl border border-white/8 bg-ink-900/60 p-3">
+                    <div class="flex flex-wrap items-start gap-3">
+                      <div class="min-w-0 flex-1">
+                        <div class="flex flex-wrap items-center gap-2">
+                          <span class="font-mono text-sm font-bold text-white"
+                            >@{{ request.username }}</span
+                          >
+                          <span
+                            class="rounded bg-amber-400/10 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider text-amber-300 ring-1 ring-inset ring-amber-400/20"
+                            >{{ i18n.t().uploadStatusPending }}</span
+                          >
+                          <span class="font-mono text-[10px] text-ink-500">{{
+                            formatDateTime(request.createdAt, i18n.locale())
+                          }}</span>
+                        </div>
+                        @if (request.message) {
+                          <p
+                            class="mt-2 whitespace-pre-line break-words rounded-xl border border-white/8 bg-ink-950/40 px-3 py-2 text-xs leading-relaxed text-ink-300"
+                          >
+                            {{ request.message }}
+                          </p>
+                        }
+                        <p class="mt-1 font-mono text-[10px] text-ink-600">
+                          {{ i18n.t().uploaderApplied }} · #{{ request.id }}
+                        </p>
+                      </div>
+                      <div class="flex shrink-0 flex-wrap gap-1.5">
+                        <button
+                          type="button"
+                          (click)="reviewUploader(request, 'approved')"
+                          [disabled]="uploaderBusyId() !== null"
+                          class="rounded-lg bg-emerald-500/15 px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-wider text-emerald-300 transition hover:bg-emerald-500/25 disabled:opacity-50"
+                        >
+                          {{ i18n.t().uploaderApprove }}
+                        </button>
+                        <button
+                          type="button"
+                          (click)="startUploaderReject(request)"
+                          [disabled]="uploaderBusyId() !== null"
+                          class="rounded-lg bg-rose-500/15 px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-wider text-rose-300 transition hover:bg-rose-500/25 disabled:opacity-50"
+                        >
+                          {{ i18n.t().uploaderReject }}
+                        </button>
+                      </div>
+                    </div>
+
+                    @if (uploaderRejectId() === request.id) {
+                      <div class="mt-3 border-t border-white/5 pt-3">
+                        <label class="text-[11px] text-ink-400">
+                          {{ i18n.t().adminNote }}
+                          <textarea
+                            [value]="uploaderNote()"
+                            (input)="onUploaderNote($event)"
+                            rows="2"
+                            maxlength="1000"
+                            class="mt-1 w-full resize-y rounded-lg border border-white/10 bg-ink-850 px-2 py-1.5 text-xs text-white outline-none focus:border-rose-400/60"
+                          ></textarea>
+                        </label>
+                        <div class="mt-2 flex justify-end gap-2">
+                          <button
+                            type="button"
+                            (click)="cancelUploaderReject()"
+                            class="rounded-lg border border-white/10 px-2.5 py-1.5 text-xs text-ink-300 transition hover:bg-white/5"
+                          >
+                            {{ i18n.t().cancel }}
+                          </button>
+                          <button
+                            type="button"
+                            (click)="confirmUploaderReject()"
+                            [disabled]="uploaderBusyId() !== null"
+                            class="rounded-lg bg-rose-500 px-2.5 py-1.5 text-xs font-semibold text-white transition hover:bg-rose-600 disabled:opacity-50"
+                          >
+                            {{ i18n.t().uploaderReject }}
+                          </button>
+                        </div>
+                      </div>
+                    }
+                  </li>
+                }
+              </ul>
+            }
+          </div>
+
+          <div>
+            <h2 class="font-mono text-[10px] uppercase tracking-[0.18em] text-ink-500">
+              {{ i18n.t().uploaderApprovedList }}
+            </h2>
+            @if (uploaderList().length === 0) {
+              <div
+                class="mt-3 rounded-2xl border border-white/8 bg-ink-900/40 px-6 py-10 text-center"
+              >
+                <p class="text-sm text-ink-400">{{ i18n.t().uploaderNoApproved }}</p>
+              </div>
+            } @else {
+              <ul class="mt-3 space-y-2">
+                @for (entry of uploaderList(); track entry.userId) {
+                  <li
+                    class="flex flex-wrap items-start gap-3 rounded-2xl border border-white/8 bg-ink-900/60 p-3"
+                  >
+                    <div class="min-w-0 flex-1">
+                      <p class="font-mono text-sm text-white">@{{ entry.username }}</p>
+                      <p class="mt-0.5 font-mono text-[10px] text-ink-500">
+                        {{ entry.postCount }} {{ i18n.t().uploaderPostCount }} ·
+                        {{ formatDate(entry.approvedAt, i18n.locale()) }} · @{{
+                          entry.approvedBy ?? '—'
+                        }}
+                      </p>
+                      @if (entry.note) {
+                        <p class="mt-1 text-xs text-ink-400">{{ entry.note }}</p>
+                      }
+                    </div>
+                    <button
+                      type="button"
+                      (click)="revokeUploader(entry)"
+                      [disabled]="revokeBusyId() !== null"
+                      class="rounded-lg border border-rose-400/25 px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-wider text-rose-300 transition hover:bg-rose-500/10 disabled:opacity-50"
+                    >
+                      {{ i18n.t().uploaderRevoke }}
+                    </button>
+                  </li>
+                }
+              </ul>
+            }
+          </div>
+        </section>
+      }
+
+      @case ('sources') {
+        <section class="mt-4 space-y-3">
+          @if (sourceSchedules().length > 0) {
+            <div class="rounded-2xl border border-white/8 bg-ink-900/60 p-3">
+              <div class="flex flex-wrap items-start justify-between gap-2">
+                <div>
+                  <h2 class="font-mono text-[10px] uppercase tracking-[0.18em] text-ink-500">
+                    {{ i18n.t().adminSourceAuto }}
+                  </h2>
+                  <p class="mt-1 text-[11px] leading-relaxed text-ink-500">
+                    {{ i18n.t().adminSourceAutoHint }}
+                  </p>
+                </div>
+              </div>
+
+              @for (schedule of sourceSchedules(); track schedule.source) {
+                <div class="mt-3 rounded-xl border border-white/8 bg-ink-850/40 p-3">
+                  <div class="flex flex-wrap items-center gap-2">
+                    <span class="font-mono text-sm text-white">{{ schedule.source }}</span>
+                    <span
+                      [class]="
+                        'rounded-full px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider ' +
+                        (schedule.enabled
+                          ? 'bg-emerald-500/15 text-emerald-300'
+                          : 'bg-white/5 text-ink-400')
+                      "
+                    >
+                      {{
+                        schedule.enabled ? i18n.t().adminSourceAutoOn : i18n.t().adminSourceAutoOff
+                      }}
+                    </span>
+                    <span class="font-mono text-[10px] uppercase tracking-wider text-ink-500">
+                      {{ scheduleModeLabel(schedule) }}
+                    </span>
+                    <button
+                      type="button"
+                      (click)="toggleSourceSchedule(schedule)"
+                      [disabled]="scheduleSaving() === schedule.source"
+                      class="ml-auto rounded-lg border border-white/10 px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-wider text-ink-200 transition hover:bg-white/5 disabled:opacity-50"
+                    >
+                      {{
+                        schedule.enabled
+                          ? i18n.t().adminSourceAutoDisable
+                          : i18n.t().adminSourceAutoEnable
+                      }}
+                    </button>
+                  </div>
+
+                  <div class="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                    <label class="text-[11px] text-ink-400">
+                      {{ i18n.t().adminSourceAutoInterval }}
+                      <input
+                        type="number"
+                        min="5"
+                        max="1440"
+                        [value]="schedule.intervalMinutes"
+                        (change)="updateScheduleNumber(schedule, 'intervalMinutes', $event)"
+                        [disabled]="scheduleSaving() === schedule.source"
+                        class="mt-1 h-8 w-full rounded-lg border border-white/10 bg-ink-850 px-2 font-mono text-xs text-white outline-none focus:border-sakura-500/60 disabled:opacity-50"
+                      />
+                    </label>
+                    <label class="text-[11px] text-ink-400">
+                      {{ i18n.t().adminSourceAutoBatch }}
+                      <input
+                        type="number"
+                        min="1"
+                        max="200"
+                        [value]="schedule.batchLimit"
+                        (change)="updateScheduleNumber(schedule, 'batchLimit', $event)"
+                        [disabled]="scheduleSaving() === schedule.source"
+                        class="mt-1 h-8 w-full rounded-lg border border-white/10 bg-ink-850 px-2 font-mono text-xs text-white outline-none focus:border-sakura-500/60 disabled:opacity-50"
+                      />
+                    </label>
+                    <label class="text-[11px] text-ink-400">
+                      {{ i18n.t().adminSourceAutoDaily }}
+                      <input
+                        type="number"
+                        min="0"
+                        max="10000"
+                        [value]="schedule.dailyLimit"
+                        (change)="updateScheduleNumber(schedule, 'dailyLimit', $event)"
+                        [disabled]="scheduleSaving() === schedule.source"
+                        class="mt-1 h-8 w-full rounded-lg border border-white/10 bg-ink-850 px-2 font-mono text-xs text-white outline-none focus:border-sakura-500/60 disabled:opacity-50"
+                      />
+                    </label>
+                    <label class="text-[11px] text-ink-400">
+                      {{ i18n.t().adminSourceAutoTags }}
+                      <input
+                        [value]="schedule.tags ?? ''"
+                        (change)="updateScheduleTags(schedule, $event)"
+                        maxlength="500"
+                        spellcheck="false"
+                        [placeholder]="i18n.t().adminSourceTagsPlaceholder"
+                        [disabled]="scheduleSaving() === schedule.source"
+                        class="mt-1 h-8 w-full rounded-lg border border-white/10 bg-ink-850 px-2 font-mono text-xs text-white outline-none placeholder:text-ink-600 focus:border-sakura-500/60 disabled:opacity-50"
+                      />
+                    </label>
+                  </div>
+
+                  <div
+                    class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-[10px] text-ink-500"
+                  >
+                    <span>
+                      {{ i18n.t().adminSourceAutoNext }}:
+                      {{ formatDateTime(schedule.nextRunAt, i18n.locale()) }}
+                    </span>
+                    <span>
+                      {{ i18n.t().adminSourceAutoUsed }}: {{ schedule.dailyUsed }} /
+                      {{ schedule.dailyLimit || '∞' }}
+                    </span>
+                    @if (schedule.headId) {
+                      <span>head #{{ schedule.headId }}</span>
+                    }
+                    @if (schedule.cursor) {
+                      <span>cursor #{{ schedule.cursor }}</span>
+                    }
+                    <button
+                      type="button"
+                      (click)="resetSourceSchedule(schedule)"
+                      [disabled]="scheduleSaving() === schedule.source"
+                      class="text-ink-400 underline decoration-dotted underline-offset-2 transition hover:text-ink-200 disabled:opacity-50"
+                    >
+                      {{ i18n.t().adminSourceAutoReset }}
+                    </button>
+                  </div>
+
+                  @if (schedule.lastError) {
+                    <p class="mt-2 text-[11px] text-amber-300">{{ schedule.lastError }}</p>
+                  }
+                </div>
+              }
+            </div>
+          }
+
+          <form
+            (submit)="startSourceRun($event)"
+            class="rounded-2xl border border-white/8 bg-ink-900/60 p-3"
+          >
+            <div
+              class="grid gap-2 sm:grid-cols-2 lg:grid-cols-[150px_minmax(0,1fr)_120px_110px_auto]"
+            >
+              <label class="text-[11px] text-ink-400">
+                {{ i18n.t().adminSourceAdapter }}
+                <select
+                  [value]="sourceForm().source"
+                  (change)="onSourceAdapter($event)"
+                  class="mt-1 h-8 w-full rounded-lg border border-white/10 bg-ink-850 px-2 font-mono text-xs text-ink-200 outline-none focus:border-sakura-500/60"
+                >
+                  @for (source of sources(); track source) {
+                    <option [value]="source">{{ source }}</option>
+                  }
+                </select>
+              </label>
+              <label class="text-[11px] text-ink-400">
+                {{ i18n.t().adminSourceTags }}
+                <input
+                  [value]="sourceForm().tags"
+                  (input)="onSourceTags($event)"
+                  maxlength="500"
+                  spellcheck="false"
+                  [placeholder]="i18n.t().adminSourceTagsPlaceholder"
+                  class="mt-1 h-8 w-full rounded-lg border border-white/10 bg-ink-850 px-2 font-mono text-xs text-white outline-none placeholder:text-ink-600 focus:border-sakura-500/60"
+                />
+              </label>
+              <label class="text-[11px] text-ink-400">
+                {{ i18n.t().adminSourceLimit }}
+                <input
+                  type="number"
+                  min="1"
+                  max="500"
+                  [value]="sourceForm().limit"
+                  (input)="onSourceLimit($event)"
+                  class="mt-1 h-8 w-full rounded-lg border border-white/10 bg-ink-850 px-2 font-mono text-xs text-white outline-none focus:border-sakura-500/60"
+                />
+              </label>
+              <label class="text-[11px] text-ink-400">
+                {{ i18n.t().adminSourcePage }}
+                <input
+                  type="number"
+                  min="1"
+                  [value]="sourceForm().page"
+                  (input)="onSourcePage($event)"
+                  class="mt-1 h-8 w-full rounded-lg border border-white/10 bg-ink-850 px-2 font-mono text-xs text-white outline-none focus:border-sakura-500/60"
+                />
+              </label>
+              <button
+                type="submit"
+                [disabled]="sourceStarting() || activeSourceRun() !== undefined"
+                class="self-end rounded-lg bg-sakura-500 px-3 py-2 text-xs font-semibold text-white transition hover:bg-sakura-600 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {{ sourceStarting() ? i18n.t().loading : i18n.t().adminSourceStart }}
+              </button>
+            </div>
+            <p class="mt-2 font-mono text-[10px] leading-relaxed text-ink-500">
+              {{ i18n.t().adminSourceHint }}
+            </p>
+          </form>
+
+          @if (sourceError()) {
+            <div class="rounded-2xl border border-rose-500/25 bg-rose-500/5 px-6 py-8 text-center">
+              <p class="text-sm text-rose-200">{{ i18n.t().errorText }}</p>
+              <button
+                type="button"
+                (click)="refreshAll()"
+                class="mt-3 rounded-lg border border-white/10 px-3 py-1.5 text-xs text-ink-200 transition hover:bg-white/5"
+              >
+                {{ i18n.t().retry }}
+              </button>
+            </div>
+          } @else {
+            <div class="grid gap-3 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+              <div class="rounded-2xl border border-white/8 bg-ink-900/60">
+                <div
+                  class="flex items-center justify-between gap-2 border-b border-white/5 px-3 py-2"
+                >
+                  <h2 class="font-mono text-[10px] uppercase tracking-[0.18em] text-ink-500">
+                    {{ i18n.t().adminSourceRuns }}
+                  </h2>
+                  @if (sourceRuns().length > 0) {
+                    <span class="font-mono text-[10px] text-ink-600">{{
+                      sourceRuns().length
+                    }}</span>
+                  }
+                </div>
+
+                @if (sourceLoading() && sourceRuns().length === 0) {
+                  <div class="space-y-2 p-2">
+                    @for (item of [0, 1, 2]; track item) {
+                      <div
+                        class="h-24 animate-pulse rounded-xl border border-white/8 bg-ink-850/60"
+                      ></div>
+                    }
+                  </div>
+                } @else if (sourceRuns().length === 0) {
+                  <div class="px-6 py-12 text-center">
+                    <p class="text-sm text-ink-400">{{ i18n.t().adminSourceNoRuns }}</p>
+                  </div>
+                } @else {
+                  <ul class="max-h-[34rem] space-y-1.5 overflow-y-auto p-2">
+                    @for (run of sourceRuns(); track run.id) {
+                      <li
+                        [class]="
+                          'rounded-xl border transition ' +
+                          (selectedSourceRunId() === run.id
+                            ? 'border-sakura-400/40 bg-sakura-500/[0.06]'
+                            : 'border-white/8 bg-ink-850/40 hover:border-white/15')
+                        "
+                      >
+                        <button
+                          type="button"
+                          (click)="selectSourceRun(run.id)"
+                          class="w-full p-2.5 text-left"
+                        >
+                          <div class="flex flex-wrap items-center gap-1.5">
+                            <span class="font-mono text-xs font-bold text-white"
+                              >#{{ run.id }}</span
+                            >
+                            <span class="font-mono text-[10px] text-ink-400">{{ run.source }}</span>
+                            @if (run.auto) {
+                              <span
+                                class="rounded bg-sky-500/10 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider text-sky-300"
+                                >auto · {{ run.mode }}</span
+                              >
+                            }
+                            <span
+                              [class]="
+                                'rounded px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider ring-1 ring-inset ' +
+                                sourceStatusClass(run.status)
+                              "
+                              >{{ sourceStatusLabel(run) }}</span
+                            >
+                            @if (isSourceActive(run.status)) {
+                              <span
+                                class="h-1.5 w-1.5 animate-pulse rounded-full bg-sky-400"
+                              ></span>
+                            }
+                            <span class="ml-auto font-mono text-[9px] text-ink-600">{{
+                              formatDateTime(run.createdAt, i18n.locale())
+                            }}</span>
+                          </div>
+
+                          @if (run.tags) {
+                            <p class="mt-1 truncate font-mono text-[10px] text-ink-500">
+                              {{ run.tags }}
+                            </p>
+                          }
+
+                          <div class="mt-2 flex items-center gap-2">
+                            <div class="h-1 flex-1 overflow-hidden rounded-full bg-white/10">
+                              <div
+                                class="h-full rounded-full bg-sakura-500 transition-[width]"
+                                [style.width.%]="sourceProgress(run)"
+                              ></div>
+                            </div>
+                            <span class="shrink-0 font-mono text-[9px] text-ink-500"
+                              >{{ run.seen }}/{{ run.limitCount }}</span
+                            >
+                          </div>
+
+                          <p
+                            class="mt-1.5 flex flex-wrap gap-x-2 font-mono text-[9px] text-ink-500"
+                          >
+                            <span
+                              >{{ i18n.t().adminSourceImported }}:
+                              <span class="text-emerald-300">{{ run.imported }}</span></span
+                            >
+                            <span
+                              >{{ i18n.t().adminSourceDuplicates }}:
+                              <span class="text-ink-300">{{ run.duplicates }}</span></span
+                            >
+                            <span
+                              >{{ i18n.t().adminSourceFailedCount }}:
+                              <span class="text-rose-300">{{ run.failed }}</span></span
+                            >
+                            <span
+                              >{{ i18n.t().adminSourcePages }}:
+                              <span class="text-ink-300">{{ run.pages }}</span></span
+                            >
+                          </p>
+                        </button>
+                      </li>
+                    }
+                  </ul>
+                }
+              </div>
+
+              <div class="overflow-hidden rounded-2xl border border-white/8 bg-ink-900/60">
+                <div class="flex flex-wrap items-center gap-2 border-b border-white/5 px-3 py-2">
+                  <h2 class="font-mono text-[10px] uppercase tracking-[0.18em] text-ink-500">
+                    {{ i18n.t().adminSourceLog }}
+                  </h2>
+                  @if (selectedSourceRun(); as run) {
+                    <span class="font-mono text-[10px] text-ink-400">#{{ run.id }}</span>
+                    <span
+                      [class]="
+                        'rounded px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider ring-1 ring-inset ' +
+                        sourceStatusClass(run.status)
+                      "
+                      >{{ sourceStatusLabel(run) }}</span
+                    >
+                    @if (isSourceActive(run.status)) {
+                      <button
+                        type="button"
+                        (click)="cancelSourceRun(run)"
+                        [disabled]="sourceCancelling() || run.cancelRequested"
+                        class="ml-auto rounded-lg border border-rose-400/25 bg-rose-500/10 px-2 py-1 font-mono text-[9px] uppercase tracking-wider text-rose-300 transition hover:bg-rose-500/20 disabled:opacity-50"
+                      >
+                        {{
+                          sourceCancelling() || run.cancelRequested
+                            ? i18n.t().adminSourceCancelling
+                            : i18n.t().adminSourceCancel
+                        }}
+                      </button>
+                    }
+                  }
+                </div>
+
+                @if (selectedSourceRun(); as run) {
+                  <div
+                    class="grid grid-cols-2 gap-1.5 border-b border-white/5 p-2.5 sm:grid-cols-5"
+                  >
+                    <div class="rounded-lg border border-white/8 bg-ink-850/50 px-2 py-1.5">
+                      <p class="font-mono text-[8px] uppercase tracking-wider text-ink-600">
+                        {{ i18n.t().adminSourceImported }}
+                      </p>
+                      <p class="font-mono text-sm font-bold text-emerald-300">
+                        {{ run.imported }}
+                      </p>
+                    </div>
+                    <div class="rounded-lg border border-white/8 bg-ink-850/50 px-2 py-1.5">
+                      <p class="font-mono text-[8px] uppercase tracking-wider text-ink-600">
+                        {{ i18n.t().adminSourceDuplicates }}
+                      </p>
+                      <p class="font-mono text-sm font-bold text-ink-200">{{ run.duplicates }}</p>
+                    </div>
+                    <div class="rounded-lg border border-white/8 bg-ink-850/50 px-2 py-1.5">
+                      <p class="font-mono text-[8px] uppercase tracking-wider text-ink-600">
+                        {{ i18n.t().adminSourceFailedCount }}
+                      </p>
+                      <p class="font-mono text-sm font-bold text-rose-300">{{ run.failed }}</p>
+                    </div>
+                    <div class="rounded-lg border border-white/8 bg-ink-850/50 px-2 py-1.5">
+                      <p class="font-mono text-[8px] uppercase tracking-wider text-ink-600">
+                        {{ i18n.t().adminSourceSeen }}
+                      </p>
+                      <p class="font-mono text-sm font-bold text-ink-200">
+                        {{ run.seen }}/{{ run.limitCount }}
+                      </p>
+                    </div>
+                    <div class="rounded-lg border border-white/8 bg-ink-850/50 px-2 py-1.5">
+                      <p class="font-mono text-[8px] uppercase tracking-wider text-ink-600">
+                        {{ i18n.t().adminSourcePages }}
+                      </p>
+                      <p class="font-mono text-sm font-bold text-ink-200">{{ run.pages }}</p>
+                    </div>
+                  </div>
+
+                  @if (run.error) {
+                    <p
+                      class="border-b border-rose-500/15 bg-rose-500/5 px-3 py-2 font-mono text-[10px] leading-relaxed text-rose-200"
+                    >
+                      {{ run.error }}
+                    </p>
+                  }
+
+                  <div
+                    #logBox
+                    class="h-80 overflow-y-auto bg-ink-950/50 p-3 font-mono text-[10px] leading-relaxed"
+                  >
+                    @if (sourceLogs().length === 0) {
+                      <p class="text-ink-500">
+                        {{ sourceLogLoading() ? i18n.t().loading : i18n.t().adminSourceNoLogs }}
+                      </p>
+                    } @else {
+                      @for (log of sourceLogs(); track log.id) {
+                        <p [class]="'whitespace-pre-wrap break-words ' + logLevelClass(log.level)">
+                          <span class="mr-1 text-ink-600">{{
+                            formatDateTime(log.createdAt, i18n.locale())
+                          }}</span>
+                          {{ log.message }}
+                        </p>
+                      }
+                    }
+                  </div>
+
+                  @if (isSourceActive(run.status) && !run.cancelRequested) {
+                    <p
+                      class="border-t border-white/5 px-3 py-1.5 font-mono text-[9px] text-ink-600"
+                    >
+                      {{ i18n.t().adminSourceCancelNote }}
+                    </p>
+                  }
+                } @else {
+                  <div class="px-6 py-16 text-center">
+                    <p class="text-sm text-ink-400">{{ i18n.t().adminSourceSelect }}</p>
+                  </div>
+                }
+              </div>
+            </div>
+          }
+        </section>
+      }
+
+      @case ('audit') {
+        <section class="mt-4">
+          @if (auditError()) {
+            <div class="rounded-2xl border border-rose-500/25 bg-rose-500/5 px-6 py-10 text-center">
+              <p class="text-sm text-rose-200">{{ i18n.t().errorText }}</p>
+            </div>
+          } @else if (auditLoading() && audit().length === 0) {
+            <div class="space-y-2">
+              @for (item of [0, 1, 2, 3]; track item) {
+                <div
+                  class="h-14 animate-pulse rounded-xl border border-white/8 bg-ink-900/60"
+                ></div>
+              }
+            </div>
+          } @else if (audit().length === 0) {
+            <div class="rounded-2xl border border-white/8 bg-ink-900/40 px-6 py-14 text-center">
+              <p class="text-sm text-ink-400">{{ i18n.t().adminNoAudit }}</p>
+            </div>
+          } @else {
+            <ul class="space-y-1.5">
+              @for (entry of audit(); track entry.id) {
+                <li
+                  class="flex flex-wrap items-baseline gap-x-3 gap-y-1 rounded-xl border border-white/8 bg-ink-900/60 px-3 py-2 text-xs"
+                >
+                  <span class="font-mono text-[10px] text-ink-500">{{
+                    formatDateTime(entry.createdAt, i18n.locale())
+                  }}</span>
+                  <span class="font-semibold text-ink-200">{{ actionLabel(entry.action) }}</span>
+                  <span class="font-mono text-[10px] text-ink-500">@{{ entry.actor ?? '—' }}</span>
+                  <span class="font-mono text-[10px] text-sakura-300/80">{{
+                    dnpTarget(entry)
+                  }}</span>
+                  @if (entry.reason) {
+                    <span class="font-mono text-[10px] text-ink-500">{{
+                      reasonLabel(entry.reason)
+                    }}</span>
+                  }
+                  @if (entry.details) {
+                    <span class="w-full text-[11px] text-ink-500">{{ entry.details }}</span>
+                  }
+                </li>
+              }
+            </ul>
+          }
+        </section>
+      }
+    }
+  }
+</div>

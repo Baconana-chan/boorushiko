@@ -1,0 +1,241 @@
+<section class="rounded-2xl border border-white/8 bg-ink-900/60">
+  <div class="flex items-center justify-between gap-2 border-b border-white/5 px-4 py-3">
+    <h2 class="font-mono text-[10px] uppercase tracking-[0.18em] text-ink-500">
+      {{ i18n.t().comments }}
+      <span class="ml-1 rounded bg-white/5 px-1.5 py-0.5 text-[10px] text-sakura-300">{{
+        total()
+      }}</span>
+    </h2>
+    @if (loading() && comments().length > 0) {
+      <span class="font-mono text-[10px] text-ink-500">{{ i18n.t().loading }}</span>
+    }
+  </div>
+
+  <div class="p-4">
+    @if (notice()) {
+      <p
+        role="alert"
+        class="mb-3 rounded-lg border border-rose-500/25 bg-rose-500/5 px-3 py-2 text-xs leading-relaxed text-rose-200"
+      >
+        {{ notice() }}
+      </p>
+    }
+
+    @if (loadError()) {
+      <div class="py-4 text-center">
+        <p class="text-sm text-ink-400">{{ i18n.t().commentsLoadError }}</p>
+        <button
+          type="button"
+          (click)="retry()"
+          class="mt-2 rounded-lg border border-white/10 px-3 py-1.5 text-xs text-ink-200 transition hover:bg-white/5"
+        >
+          {{ i18n.t().retry }}
+        </button>
+      </div>
+    } @else if (loading() && comments().length === 0) {
+      <div class="space-y-4">
+        @for (item of [0, 1, 2]; track item) {
+          <div class="flex gap-3">
+            <span class="h-8 w-8 animate-pulse rounded-lg bg-ink-800"></span>
+            <div class="flex-1 space-y-2">
+              <span class="block h-3 w-28 animate-pulse rounded bg-ink-800"></span>
+              <span class="block h-3 w-full animate-pulse rounded bg-ink-850"></span>
+            </div>
+          </div>
+        }
+      </div>
+    } @else if (comments().length === 0) {
+      <p class="py-2 text-sm text-ink-500">{{ i18n.t().noComments }}</p>
+    } @else {
+      @if (hasMore()) {
+        <button
+          type="button"
+          (click)="loadEarlier()"
+          [disabled]="loading()"
+          class="mb-4 rounded-lg border border-white/10 px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-wider text-ink-400 transition hover:border-sakura-500/40 hover:text-ink-200 disabled:opacity-50"
+        >
+          {{ i18n.t().loadEarlierComments }}
+        </button>
+      }
+
+      <ul class="space-y-4">
+        @for (comment of comments(); track comment.id) {
+          <li class="group flex gap-2.5">
+            <div class="flex w-7 shrink-0 flex-col items-center gap-0.5 pt-0.5">
+              <button
+                type="button"
+                (click)="vote(comment, 1)"
+                [disabled]="votingId() === comment.id"
+                [attr.aria-label]="i18n.t().commentVoteUp"
+                [attr.aria-pressed]="comment.myVote === 1"
+                [class]="
+                  'rounded px-1 py-0.5 text-[10px] leading-none transition disabled:opacity-50 ' +
+                  (comment.myVote === 1
+                    ? 'bg-emerald-500/15 text-emerald-300'
+                    : 'text-ink-500 hover:bg-white/5 hover:text-ink-200')
+                "
+              >
+                ▲
+              </button>
+              <span
+                [class]="'font-mono text-[11px] font-semibold ' + scoreClass(comment.score)"
+                [title]="i18n.t().commentScore"
+                >{{ comment.score }}</span
+              >
+              <button
+                type="button"
+                (click)="vote(comment, -1)"
+                [disabled]="votingId() === comment.id"
+                [attr.aria-label]="i18n.t().commentVoteDown"
+                [attr.aria-pressed]="comment.myVote === -1"
+                [class]="
+                  'rounded px-1 py-0.5 text-[10px] leading-none transition disabled:opacity-50 ' +
+                  (comment.myVote === -1
+                    ? 'bg-rose-500/15 text-rose-300'
+                    : 'text-ink-500 hover:bg-white/5 hover:text-ink-200')
+                "
+              >
+                ▼
+              </button>
+            </div>
+            <span
+              class="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/5 font-mono text-xs font-bold uppercase text-sakura-300"
+            >
+              {{ comment.user.username.charAt(0) }}
+            </span>
+            <div class="min-w-0 flex-1">
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="font-mono text-xs font-semibold text-sakura-300"
+                  >@{{ comment.user.username }}</span
+                >
+                @if (comment.user.role !== 'user') {
+                  <span
+                    [class]="
+                      'rounded px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider ring-1 ring-inset ' +
+                      roleClass(comment.user.role)
+                    "
+                  >
+                    {{ roleLabel(comment.user.role) }}
+                  </span>
+                }
+                <span
+                  [class]="'font-mono text-[10px] ' + karmaClass(comment.authorKarma)"
+                  [title]="i18n.t().commentKarmaHint"
+                  >{{ i18n.t().commentKarma }} {{ comment.authorKarma }}</span
+                >
+                <span class="font-mono text-[10px] text-ink-500">{{
+                  formatDateTime(comment.createdAt, i18n.locale())
+                }}</span>
+
+                @if (auth.canDelete(comment)) {
+                  <div
+                    class="ml-auto flex items-center gap-1 opacity-100 transition sm:opacity-0 sm:focus-within:opacity-100 sm:group-hover:opacity-100"
+                  >
+                    @if (confirmingId() === comment.id) {
+                      <button
+                        type="button"
+                        (click)="remove(comment)"
+                        [disabled]="deletingId() === comment.id"
+                        class="rounded px-1.5 py-0.5 font-mono text-[10px] text-rose-300 transition hover:bg-rose-500/10 disabled:opacity-50"
+                      >
+                        {{ i18n.t().confirm }}
+                      </button>
+                      <button
+                        type="button"
+                        (click)="confirmingId.set(null)"
+                        class="rounded px-1.5 py-0.5 font-mono text-[10px] text-ink-500 transition hover:text-ink-200"
+                      >
+                        {{ i18n.t().cancel }}
+                      </button>
+                    } @else {
+                      <button
+                        type="button"
+                        (click)="confirmingId.set(comment.id)"
+                        class="rounded px-1.5 py-0.5 font-mono text-[10px] text-ink-500 transition hover:bg-white/5 hover:text-rose-300"
+                      >
+                        {{ i18n.t().deleteComment }}
+                      </button>
+                    }
+                  </div>
+                }
+              </div>
+
+              @if (comment.hidden && !isHiddenExpanded(comment)) {
+                <div
+                  class="mt-1 flex flex-wrap items-center gap-2 rounded-lg border border-white/8 bg-white/[0.02] px-3 py-2"
+                >
+                  <span class="text-xs text-ink-400">{{ i18n.t().commentHidden }}</span>
+                  <span class="font-mono text-[10px] text-ink-600">({{ comment.score }})</span>
+                  <button
+                    type="button"
+                    (click)="toggleHidden(comment)"
+                    class="font-mono text-[10px] text-sakura-300 underline decoration-dotted underline-offset-2 transition hover:text-sakura-200"
+                  >
+                    {{ i18n.t().commentShow }}
+                  </button>
+                </div>
+              } @else {
+                <p
+                  class="mt-1 whitespace-pre-line break-words text-sm leading-relaxed text-ink-300"
+                >
+                  {{ comment.body }}
+                </p>
+                @if (comment.hidden) {
+                  <button
+                    type="button"
+                    (click)="toggleHidden(comment)"
+                    class="mt-1 font-mono text-[10px] text-ink-500 transition hover:text-ink-200"
+                  >
+                    {{ i18n.t().commentHide }}
+                  </button>
+                }
+              }
+            </div>
+          </li>
+        }
+      </ul>
+    }
+  </div>
+
+  <div class="border-t border-white/5 p-4">
+    @if (!auth.ready()) {
+      <div class="h-16 animate-pulse rounded-lg bg-ink-850"></div>
+    } @else if (auth.user(); as user) {
+      <form (submit)="submit($event)">
+        <div class="mb-2 flex items-center gap-2">
+          <span class="font-mono text-[11px] text-ink-500">@{{ user.username }}</span>
+          <span class="font-mono text-[10px] text-ink-600">·</span>
+          <span class="text-[10px] text-ink-500">{{ i18n.t().commentHint }}</span>
+        </div>
+        <textarea
+          [value]="draft()"
+          (input)="onDraft($event)"
+          maxlength="2000"
+          rows="3"
+          [placeholder]="i18n.t().commentPlaceholder"
+          class="w-full resize-y rounded-lg border border-white/10 bg-ink-850 px-3 py-2 text-sm leading-relaxed text-white outline-none transition placeholder:text-ink-600 focus:border-sakura-500/60 focus:ring-2 focus:ring-sakura-500/20"
+        ></textarea>
+        <div class="mt-2 flex items-center gap-3">
+          <span class="font-mono text-[10px] text-ink-500">{{ draft().length }} / 2000</span>
+          <button
+            type="submit"
+            [disabled]="!canSubmit()"
+            class="ml-auto rounded-lg bg-sakura-500 px-3 py-2 text-xs font-semibold text-white transition hover:bg-sakura-600 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {{ submitting() ? i18n.t().loading : i18n.t().commentSubmit }}
+          </button>
+        </div>
+      </form>
+    } @else {
+      <p class="text-sm text-ink-400">
+        {{ i18n.t().signInToComment }}
+        <a
+          [routerLink]="['/auth']"
+          [queryParams]="{ next: '/post/' + postId() }"
+          class="font-semibold text-sakura-300 transition hover:text-sakura-200"
+          >{{ i18n.t().signIn }}</a
+        >
+      </p>
+    }
+  </div>
+</section>
